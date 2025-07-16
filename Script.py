@@ -208,7 +208,7 @@ Nᴀᴍᴇ : {}
 
 Mᴇꜱꜱᴀɢᴇ : <b>{}</b>"""
     
-    CAPTION = """<b><a href="https://t.me/moviestelecast">{file_name}</a></b>\n\n<b> : <a href="https://t.me/moviestelecast">[ ᴅʀᴇᴀᴍxʙᴏᴛᴢ ]</a></b>"""
+    CAPTION = """<b><a href="https://t.me/moviestelecast">{file_name}</a></b>\n\n<b> : <a href="https://t.me/moviestelecast">[ MOVIES HUB ]</a></b>"""
 
     
     MOVIE_UPDATE_NOTIFY_TXT = """
