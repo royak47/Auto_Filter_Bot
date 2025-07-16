@@ -46,7 +46,7 @@ def start_auto_ping():
                 logging.info(f"✅ Auto Ping Success: {response.status_code}")
             except Exception as e:
                 logging.warning(f"⚠️ Auto Ping failed: {e}")
-            time.sleep(600)  # Ping every 10 minutes
+            time.sleep(600)  # Every 10 minutes
 
     thread = threading.Thread(target=ping_loop, daemon=True)
     thread.start()
@@ -108,28 +108,26 @@ async def dreamxbotz_start():
         text=script.RESTART_TXT.format(temp.B_LINK, today, time_str)
     )
 
-    # ✅ Set up web server with /ping route
+    # ✅ Create web app from web_server
+    app = await web_server()
+
+    # ✅ Add /ping route for uptime check
     async def ping(request):
         return web.Response(text="Pong!")
 
-    app = web.Application()
     app.router.add_get("/ping", ping)
 
-    # ✅ Mount subapp from web_server
-    subapp = await web_server()
-    app.add_subapp("/", subapp)
-
+    # ✅ Start web server
     runner = web.AppRunner(app)
     await runner.setup()
     bind_address = "0.0.0.0"
     await web.TCPSite(runner, bind_address, PORT).start()
 
-    # ✅ Keep Alive (fake ping)
+    # ✅ Fake Keep Alive for other platforms (optional)
     dreamxbotz.loop.create_task(keep_alive())
 
-    # ✅ Idle to keep running
+    # ✅ Stay running
     await idle()
-
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
