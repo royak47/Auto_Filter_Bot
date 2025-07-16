@@ -38,7 +38,7 @@ async def broadcast_users(bot, message):
     await p.delete()
     users = await db.get_all_users()
     b_msg = message.reply_to_message
-    moviestelecast_sts = await message.reply_text(text='<b>Bʀᴏᴀᴅᴄᴀsᴛɪɴɢ Yᴏᴜʀ Mᴇssᴀɢᴇs...⌛️</b>')
+    dreamxbotz_sts = await message.reply_text(text='<b>Bʀᴏᴀᴅᴄᴀsᴛɪɴɢ Yᴏᴜʀ Mᴇssᴀɢᴇs...⌛️</b>')
     start_time = time.time()
     total_users = await db.total_users_count()
     done = 0
@@ -51,7 +51,7 @@ async def broadcast_users(bot, message):
             time_taken = get_readable_time(time.time()-start_time)
             if temp.B_USERS_CANCEL:
                 temp.B_USERS_CANCEL = False
-                await moviestelecast_sts.edit(f"Users broadcast Cancelled!\nCompleted in {time_taken}\n\nTotal Users: <code>{total_users}</code>\nCompleted: <code>{done} / {total_users}</code>\nSuccess: <code>{success}</code>\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}")
+                await dreamxbotz_sts.edit(f"Users broadcast Cancelled!\nCompleted in {time_taken}\n\nTotal Users: <code>{total_users}</code>\nCompleted: <code>{done} / {total_users}</code>\nSuccess: <code>{success}</code>\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}")
                 return
             _, sts = await users_broadcast(int(user['id']), b_msg, is_pin)
             if sts == 'Success':
@@ -67,8 +67,8 @@ async def broadcast_users(bot, message):
                 btn = [[
                     InlineKeyboardButton('CANCEL', callback_data=f'broadcast_cancel#users')
                 ]]
-                await moviestelecast_sts.edit(f"Bʀᴏᴀᴅᴄᴀsᴛ Iɴ Pʀᴏɢʀᴇss:\n\nTᴏᴛᴀʟ Uꜱᴇʀꜱ {total_users}\nCᴏᴍᴩʟᴇᴛᴇᴅ: {done} / {total_users}\nSᴜᴄᴄᴇꜱꜱ: {success}\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}", reply_markup=InlineKeyboardMarkup(btn))
-        await moviestelecast_sts.edit(f"Users broadcast completed.\nCompleted in {time_taken}\n\nTotal Users: <code>{total_users}</code>\nCompleted: <code>{done} / {total_users}</code>\nSuccess: <code>{success}</code>\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}")
+                await dreamxbotz_sts.edit(f"Bʀᴏᴀᴅᴄᴀsᴛ Iɴ Pʀᴏɢʀᴇss:\n\nTᴏᴛᴀʟ Uꜱᴇʀꜱ {total_users}\nCᴏᴍᴩʟᴇᴛᴇᴅ: {done} / {total_users}\nSᴜᴄᴄᴇꜱꜱ: {success}\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}", reply_markup=InlineKeyboardMarkup(btn))
+        await dreamxbotz_sts.edit(f"Users broadcast completed.\nCompleted in {time_taken}\n\nTotal Users: <code>{total_users}</code>\nCompleted: <code>{done} / {total_users}</code>\nSuccess: <code>{success}</code>\nBʟᴏᴄᴋᴇᴅ: {blocked}\nDᴇʟᴇᴛᴇᴅ: {deleted}")
 
 @Client.on_message(filters.command("grp_broadcast") & filters.user(ADMINS) & filters.reply)
 async def broadcast_group(bot, message):
@@ -84,7 +84,7 @@ async def broadcast_group(bot, message):
     await p.delete()
     chats = await db.get_all_chats()
     b_msg = message.reply_to_message
-    moviestelecast_sts = await message.reply_text(text='<b>Bʀᴏᴀᴅᴄᴀsᴛɪɴɢ Yᴏᴜʀ Mᴇssᴀɢᴇs...⏳</b>')
+    dreamxbotz_sts = await message.reply_text(text='<b>Bʀᴏᴀᴅᴄᴀsᴛɪɴɢ Yᴏᴜʀ Mᴇssᴀɢᴇs...⏳</b>')
     start_time = time.time()
     total_chats = await db.total_chat_count()
     done = 0
@@ -95,7 +95,7 @@ async def broadcast_group(bot, message):
             time_taken = get_readable_time(time.time()-start_time)
             if temp.B_GROUPS_CANCEL:
                 temp.B_GROUPS_CANCEL = False
-                await moviestelecast_sts.edit(f"Groups broadcast Cancelled!\nCompleted in {time_taken}\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>")
+                await dreamxbotz_sts.edit(f"Groups broadcast Cancelled!\nCompleted in {time_taken}\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>")
                 return
             sts = await groups_broadcast(int(chat['id']), b_msg, is_pin)
             if sts == 'Success':
@@ -107,9 +107,9 @@ async def broadcast_group(bot, message):
                 btn = [[
                     InlineKeyboardButton('CANCEL', callback_data=f'broadcast_cancel#groups')
                 ]]
-                await moviestelecast_sts.edit(f"Gʀᴏᴜᴘ ʙʀᴏᴀᴅᴄᴀsᴛ ɪɴ ᴘʀᴏɢʀᴇss...\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>", reply_markup=InlineKeyboardMarkup(btn))  
+                await dreamxbotz_sts.edit(f"Gʀᴏᴜᴘ ʙʀᴏᴀᴅᴄᴀsᴛ ɪɴ ᴘʀᴏɢʀᴇss...\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>", reply_markup=InlineKeyboardMarkup(btn))  
         try:         
-            await moviestelecast_sts.edit(f"Gʀᴏᴜᴘ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ.\nCompleted in {time_taken}\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>")
+            await dreamxbotz_sts.edit(f"Gʀᴏᴜᴘ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ.\nCompleted in {time_taken}\n\nTotal Groups: <code>{total_chats}</code>\nCompleted: <code>{done} / {total_chats}</code>\nSuccess: <code>{success}</code>\nFailed: <code>{failed}</code>")
         except MessageTooLong:
             with open('reason.txt', 'w+') as outfile:
                 outfile.write(failed)

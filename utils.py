@@ -638,6 +638,14 @@ def get_readable_time(seconds):
             result.append(f'{int(period_value)}{period_name}')
     return ' '.join(result)  
 
+def generate_season_variations(search_raw: str, season_number: int):
+    return [
+        f"{search_raw} s{season_number:02}",
+        f"{search_raw} season {season_number}",
+        f"{search_raw} season {season_number:02}",
+    ]
+
+
 
 async def get_seconds(time_string):
     def extract_value_and_unit(ts):

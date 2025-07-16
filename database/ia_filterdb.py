@@ -131,49 +131,85 @@ async def get_search_results(chat_id, query, file_type=None, max_results=10, off
     if chat_id is not None:
         settings = await get_settings(int(chat_id))
         try:
-            max_results = 10 if settings.get('max_btn') else int(MAX_B_TN)
+            max_results = 10 if settings.get("max_btn") else int(MAX_B_TN)
         except KeyError:
-            await save_group_settings(int(chat_id), 'max_btn', False)
+            await save_group_settings(int(chat_id), "max_btn", False)
             settings = await get_settings(int(chat_id))
-            max_results = 10 if settings.get('max_btn') else int(MAX_B_TN)
+            max_results = 10 if settings.get("max_btn") else int(MAX_B_TN)
+    if isinstance(query, list):
+        regex_list = []
+        for q in query:
+            q = q.strip()
+            if not q:
+                continue
+            if " " not in q:
+                raw = r"(\b|[\.\+\-_])" + re.escape(q) + r"(\b|[\.\+\-_])"
+            else:
+                raw = re.escape(q).replace(r"\ ", r".*[\s\.\+\-_()]")
+            regex_list.append(re.compile(raw, re.IGNORECASE))
 
-    query = query.strip()
-    if not query:
-        raw_pattern = '.'
-    elif ' ' not in query:
-        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
-    else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_()]')
+        if USE_CAPTION_FILTER:
+            filter_mongo = {
+                "$or": (
+                    [{"file_name": r} for r in regex_list] +
+                    [{"caption":   r} for r in regex_list]
+                )
+            }
+        else:
+            filter_mongo = {"$or": [{"file_name": r} for r in regex_list]}
 
-    try:
-        regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
-        return []
-    if USE_CAPTION_FILTER:
-        filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
-    else:
-        filter = {'file_name': regex}
+    else:  
+        query = query.strip()
+        if not query:
+            raw_pattern = "."
+        elif " " not in query:
+            raw_pattern = r"(\b|[\.\+\-_])" + query + r"(\b|[\.\+\-_])"
+        else:
+            raw_pattern = query.replace(" ", r".*[\s\.\+\-_()]")
+
+        try:
+            regex = re.compile(raw_pattern, flags=re.IGNORECASE)
+        except re.error:
+            return [], "", 0
+
+        if USE_CAPTION_FILTER:
+            filter_mongo = {"$or": [{"file_name": regex}, {"caption": regex}]}
+        else:
+            filter_mongo = {"file_name": regex}
     if file_type:
-        filter['file_type'] = file_type
-    total_results = await Media.count_documents(filter)
+        filter_mongo["file_type"] = file_type
+    total_results = await Media.count_documents(filter_mongo)
     if MULTIPLE_DB:
-        total_results += await Media2.count_documents(filter)
-    if max_results % 2 != 0:
-        logger.info(f"Since max_results Is An Odd Number ({max_results}), Bot Will Use {max_results + 1} As max_results To Make It Even.")
+        total_results += await Media2.count_documents(filter_mongo)
+
+    if max_results % 2:         
         max_results += 1
-    cursor1 = Media.find(filter).sort('$natural', -1).skip(offset).limit(max_results)
+
+    cursor1 = (
+        Media.find(filter_mongo)
+        .sort("$natural", -1)
+        .skip(offset)
+        .limit(max_results)
+    )
     files1 = await cursor1.to_list(length=max_results)
+
     if MULTIPLE_DB:
-        remaining_results = max_results - len(files1)
-        cursor2 = Media2.find(filter).sort('$natural', -1).skip(offset).limit(remaining_results)
-        files2 = await cursor2.to_list(length=remaining_results)
+        remaining = max_results - len(files1)
+        cursor2 = (
+            Media2.find(filter_mongo)
+            .sort("$natural", -1)
+            .skip(offset)
+            .limit(remaining)
+        )
+        files2 = await cursor2.to_list(length=remaining)
         files = files1 + files2
     else:
         files = files1
     next_offset = offset + len(files)
     if next_offset >= total_results:
-        next_offset = ''
+        next_offset = ""
     return files, next_offset, total_results
+
 
 
 async def get_bad_files(query, file_type=None, filter=False):
@@ -320,3 +356,4 @@ async def dreamxbotz_get_series(limit: int = 30) -> Dict[str, List[int]]:
     except Exception as e:
         logger.error(f"Error in dreamxbotz_get_series: {e}")
         return []
+
