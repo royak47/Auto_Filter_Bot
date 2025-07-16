@@ -93,3 +93,22 @@ if __name__ == '__main__':
         loop.run_until_complete(dreamxbotz_start())
     except KeyboardInterrupt:
         logging.info('Service Stopped Bye 👋')
+
+# ✅ AUTO-PING THREAD TO KEEP RENDER AWAKE
+import asyncio
+import threading
+
+def start_auto_ping():
+    def ping_loop():
+        while True:
+            try:
+                response = requests.get("https://teenage-meryl-mitt-1e2b4039.koyeb.app//ping", timeout=10)
+                logger.info(f"✅ Auto Ping: {response.status_code}")
+            except Exception as e:
+                logger.warning(f"⚠️ Auto Ping failed: {e}")
+            asyncio.run(asyncio.sleep(600))  # 10 minutes
+
+    thread = threading.Thread(target=ping_loop, daemon=True)
+    thread.start()
+
+start_auto_ping()
