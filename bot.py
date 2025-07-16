@@ -9,8 +9,8 @@ import asyncio
 from datetime import date, datetime
 import pytz
 from aiohttp import web
-import requests  # ✅ Added for auto-ping
-import threading  # ✅ For background pinging
+import requests
+import threading
 import logging
 import logging.config
 
@@ -24,7 +24,7 @@ from dreamxbotz.Bot import dreamxbotz
 from dreamxbotz.util.keepalive import ping_server
 from dreamxbotz.Bot.clients import initialize_clients
 
-# ✅ Logging setup
+# ✅ Logging Setup
 logging.config.fileConfig('logging.conf')
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
@@ -37,7 +37,7 @@ botStartTime = time.time()
 ppath = "plugins/*.py"
 files = glob.glob(ppath)
 
-# ✅ Auto-Ping Thread to Keep Koyeb Awake
+# ✅ Auto-Ping Thread for Koyeb
 def start_auto_ping():
     def ping_loop():
         while True:
@@ -46,17 +46,16 @@ def start_auto_ping():
                 logging.info(f"✅ Auto Ping Success: {response.status_code}")
             except Exception as e:
                 logging.warning(f"⚠️ Auto Ping failed: {e}")
-            time.sleep(600)  # Sleep 10 minutes
+            time.sleep(600)  # Ping every 10 minutes
 
     thread = threading.Thread(target=ping_loop, daemon=True)
     thread.start()
 
-# ✅ Start auto ping
+# Start Auto Ping
 start_auto_ping()
 
 async def dreamxbotz_start():
-    print('\n')
-    print('\nInitalizing DreamxBotz')
+    print('\n\nInitalizing DreamxBotz')
     await dreamxbotz.start()
     bot_info = await dreamxbotz.get_me()
     dreamxbotz.username = bot_info.username
@@ -104,29 +103,31 @@ async def dreamxbotz_start():
     today = date.today()
     now = datetime.now(tz)
     time_str = now.strftime("%H:%M:%S %p")
-    await dreamxbotz.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(temp.B_LINK, today, time_str))
+    await dreamxbotz.send_message(
+        chat_id=LOG_CHANNEL,
+        text=script.RESTART_TXT.format(temp.B_LINK, today, time_str)
+    )
 
-    # ✅ Setup aiohttp web server with /ping
+    # ✅ Set up web server with /ping route
     async def ping(request):
         return web.Response(text="Pong!")
 
     app = web.Application()
     app.router.add_get("/ping", ping)
 
-    # Merge with existing web_server routes (if needed)
+    # ✅ Mount subapp from web_server
     subapp = await web_server()
-    for route in subapp.router.routes():
-        app.router.add_route(route.method, route.path, route.handler)
+    app.add_subapp("/", subapp)
 
     runner = web.AppRunner(app)
     await runner.setup()
     bind_address = "0.0.0.0"
     await web.TCPSite(runner, bind_address, PORT).start()
 
-    # Keep-alive task
+    # ✅ Keep Alive (fake ping)
     dreamxbotz.loop.create_task(keep_alive())
 
-    # Idle
+    # ✅ Idle to keep running
     await idle()
 
 
