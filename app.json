@@ -36,7 +36,7 @@
         },
         "ADMINS": {
             "description": "Username or ID of Admin. Separate multiple Admins by space.",
-            "required": false
+            "required": true
         },
         "PICS": {
             "description": "Add some telegraph link of pictures .",
