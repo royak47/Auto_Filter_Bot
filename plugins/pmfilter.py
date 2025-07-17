@@ -261,7 +261,6 @@ async def next_page(bot, query):
         cur_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
         time_difference = timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(cur_time.second+(cur_time.microsecond/1000000))) - timedelta(hours=curr_time.hour, minutes=curr_time.minute, seconds=(curr_time.second+(curr_time.microsecond/1000000)))
         remaining_seconds = "{:.2f}".format(time_difference.total_seconds())
-        total = len(files)
         cap = await get_cap(settings, remaining_seconds, files, query, total, search)
         try:
             await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True)
@@ -292,10 +291,13 @@ async def advantage_spoll_choker(bot, query):
         reqstr1 = query.from_user.id if query.from_user else 0
         reqstr = await bot.get_users(reqstr1)
         if NO_RESULTS_MSG:
-            await bot.send_message(chat_id=BIN_CHANNEL,text=script.NORSLTS.format(reqstr.id, reqstr.mention, movie))
-        contact_admin_button = InlineKeyboardMarkup(
+            try:
+                await bot.send_message(chat_id=BIN_CHANNEL,text=script.NORSLTS.format(reqstr.id, reqstr.mention, movie))
+            except Exception as e:
+                print(f"Error In Spol - {e}   Make Sure Bot Admin BIN CHANNEL")
+        btn = InlineKeyboardMarkup(
             [[InlineKeyboardButton("🔰Cʟɪᴄᴋ ʜᴇʀᴇ & ʀᴇǫᴜᴇsᴛ ᴛᴏ ᴀᴅᴍɪɴ🔰", url=OWNER_LNK)]])
-        k = await query.message.edit(script.MVE_NT_FND,reply_markup=contact_admin_button)
+        k = await query.message.edit(script.MVE_NT_FND,reply_markup=btn)
         await asyncio.sleep(10)
         await k.delete()
                 
@@ -584,20 +586,17 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
 @Client.on_callback_query(filters.regex(r"^fs#"))
 async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
     _, season_tag, key = query.data.split("#")
-    search_raw = FRESH.get(key).replace("_", " ")
+    search = FRESH.get(key).replace("_", " ")
     season_tag = season_tag.lower()
-
     if season_tag == "homepage":
-        search_final = search_raw
+        search_final = search
         query_input = search_final
     else:
         season_number = int(season_tag[1:])
-        query_input = generate_season_variations(search_raw, season_number)
+        query_input = generate_season_variations(search, season_number)
         search_final = " | ".join(query_input)
 
-    search_final = " | ".join(query_input)
-    BUTTONS[key] = search_final
-
+    BUTTONS[key] = search
     try:
         if int(query.from_user.id) not in [query.message.reply_to_message.from_user.id, 0]:
             return await query.answer("⚠️ Not your request", show_alert=True)
@@ -669,12 +668,11 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
             seconds=curr_time.second + curr_time.microsecond / 1_000_000,
         )
         remaining_seconds = f"{time_difference.total_seconds():.2f}"
-        total_results = len(files)
-        caption = await get_cap(settings, remaining_seconds, files, query, total_results, search_final)
+        cap = await get_cap(settings, remaining_seconds, files, query, total_results, search)
 
         try:
             await query.message.edit_text(
-                text=caption,
+                text=cap,
                 reply_markup=InlineKeyboardMarkup(btn),
                 disable_web_page_preview=True,
             )
@@ -1475,7 +1473,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "source":
         buttons = [[
-            InlineKeyboardButton('MOVIES HUB 📜', url='@moviestelecast'),
+            InlineKeyboardButton('ᴅʀᴇᴀᴍxʙᴏᴛᴢ 📜', url='https://github.com/DreamXBotz/Auto_Filter_Bot.git'),
             InlineKeyboardButton('⇋ ʙᴀᴄᴋ ⇋', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
@@ -1845,9 +1843,9 @@ async def auto_filter(client, msg, spoll=False):
                 cap += f"<b>\n<a href='https://telegram.me/{temp.U_NAME}?start=file_{message.chat.id}_{file.file_id}'> 📁 {get_size(file.file_size)} ▷ {clean_filename(file.file_name)}\n</a></b>"
     else:
         if settings.get('button'):
-            cap = f"<b>🏷 ᴛɪᴛʟᴇ : <code>{search}</code>\n🧱 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n🎥 ᴘᴏᴡᴇʀᴇᴅ ʙʏ : ⚡ {message.chat.title or temp.B_LINK or 'MOVIES HUB'} \n\n🧾 <u>Your Requested Files Are Here</u> 👇 \n\n</b>"
+            cap = f"<b>🏷 ᴛɪᴛʟᴇ : <code>{search}</code>\n🧱 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : ⚡ {message.chat.title or temp.B_LINK or 'ᴅʀᴇᴀᴍxʙᴏᴛᴢ'} \n\n🧾 <u>Your Requested Files Are Here</u> 👇 \n\n</b>"
         else:
-            cap = f"<b>🏷 ᴛɪᴛʟᴇ : <code>{search}</code>\n🧱 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n🎥 ᴘᴏᴡᴇʀᴇᴅ ʙʏ : ⚡ {message.chat.title or temp.B_LINK or 'MOVIES HUB'} \n\n🧾 <u>Your Requested Files Are Here</u> 👇 \n\n</b>"
+            cap = f"<b>🏷 ᴛɪᴛʟᴇ : <code>{search}</code>\n🧱 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : ⚡ {message.chat.title or temp.B_LINK or 'ᴅʀᴇᴀᴍxʙᴏᴛᴢ'} \n\n🧾 <u>Your Requested Files Are Here</u> 👇 \n\n</b>"
             
             for file in files:
                 cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=file_{message.chat.id}_{file.file_id}'> 📁 {get_size(file.file_size)} ▷ {clean_filename(file.file_name)}\n\n</a></b>"
@@ -1973,4 +1971,3 @@ async def advantage_spell_chok(client, message):
         await message.delete()
     except:
         pass
-
