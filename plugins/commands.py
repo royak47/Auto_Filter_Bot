@@ -242,7 +242,7 @@ async def start(client, message):
                 except ChatAdminRequired:
                     print("⚠️ Please make sure the bot has admin rights in the required channel: AUTH_REQ_CHANNEL 🤧")
                     return
-                btn.append([InlineKeyboardButton("⛔️ ᴊᴏɪɴ ɴᴏᴡ ⛔️", url=invite_link_default.invite_link)])
+                btn.append([InlineKeyboardButton("💕 ᴊᴏɪɴ ɴᴏᴡ ", url=invite_link_default.invite_link)])
             if btn:
                 if len(message.command) > 1 and "_" in message.command[1]:
                     kk, file_id = message.command[1].split("_", 1)
@@ -251,15 +251,17 @@ async def start(client, message):
                     ])
                     reply_markup = InlineKeyboardMarkup(btn)
                     caption = (
-                        f"👋 Hello {message.from_user.mention}\n\n"
-                        "You have not joined all our <b>Updates Channels</b> yet.\n"
-                        "Please click the <b>Join Updates Channels</b> buttons below and ensure that you join <b>all</b> the listed channels.\n"
-                        "After that, please try again.\n\n"
-                        "आपने हमारे <b>सभी Updates Channels</b> को जॉइन नहीं किया है।\n"
-                        "कृपया <b>Join Updates Channels</b> बटन पर क्लिक करें और सुनिश्चित करें कि आपने <b>सभी चैनल्स</b> को जॉइन किया है।\n"
-                        "इसके बाद, कृपया फिर से प्रयास करें।"
+                        f"""
+                         👋 <b>Hello {message.from_user.mention}!</b>\n\n
+                         🚫 You haven’t joined all our <b>Updates Channels</b> yet.\n
+                         ✅ Please click the <b>Join Updates Channels</b> buttons below and make sure you join <b>all</b> the channels listed.\n
+                         🔁 After joining, try again.\n\n
+                         🛑 <b>आपने हमारे सभी Updates Channels को अभी तक जॉइन नहीं किया है।</b>\n
+                         👉 कृपया नीचे दिए गए <b>Join Updates Channels</b> बटन पर क्लिक करें और सुनिश्चित करें कि आपने <b>सभी चैनल्स</b> जॉइन किए हैं।\n
+                         🔄 इसके बाद, कृपया फिर से प्रयास करें।
+                         """
                     )
-                    photo = random.choice(FSUB_PICS) if FSUB_PICS else "https://graph.org/file/7478ff3eac37f4329c3d8.jpg"
+                    photo = random.choice(FSUB_PICS) if FSUB_PICS else "https://i.ibb.co/4gsZmY3d/temp.jpg"
                     await message.reply_photo(
                         photo=photo,
                         caption=caption,
