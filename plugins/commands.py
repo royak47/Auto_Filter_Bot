@@ -251,16 +251,16 @@ async def start(client, message):
                     ])
                     reply_markup = InlineKeyboardMarkup(btn)
                     caption = (
-                        f"""
-                         👋 <b>Hello {message.from_user.mention}!</b>\n\n
-                         🚫 You haven’t joined all our <b>Updates Channels</b> yet.\n
-                         ✅ Please click the <b>Join Updates Channels</b> buttons below and make sure you join <b>all</b> the channels listed.\n
-                         🔁 After joining, try again.\n\n
-                         🛑 <b>आपने हमारे सभी Updates Channels को अभी तक जॉइन नहीं किया है।</b>\n
-                         👉 कृपया नीचे दिए गए <b>Join Updates Channels</b> बटन पर क्लिक करें और सुनिश्चित करें कि आपने <b>सभी चैनल्स</b> जॉइन किए हैं।\n
-                         🔄 इसके बाद, कृपया फिर से प्रयास करें।
-                         """
-                    )
+    f"<b>👋 Hello {message.from_user.mention}!</b>\n\n"
+    "🔒 You haven’t joined all our <b>Updates Channels</b> yet.\n"
+    "To continue, please join <b>all the channels</b> using the buttons below ⬇️\n"
+    "Once done, tap <b>Try Again</b> to access content.\n\n"
+    "<b>📢 अपडेट:</b>\n"
+    "<b>आपने हमारे सभी Updates Channels जॉइन नहीं किए हैं।</b>\n"
+    "कृपया नीचे दिए गए बटनों से <b>सभी चैनल्स</b> जॉइन करें।\n"
+    "उसके बाद <b>Try Again</b> दबाएं और कंटेंट एक्सेस करें।\n\n"
+    "✅ Thank you for supporting us!"
+)
                     photo = random.choice(FSUB_PICS) if FSUB_PICS else "https://i.ibb.co/4gsZmY3d/temp.jpg"
                     await message.reply_photo(
                         photo=photo,
