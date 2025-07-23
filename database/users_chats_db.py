@@ -17,17 +17,18 @@ class Database:
         self.misc = self.db.misc
         self.verify_id = self.db.verify_id 
         self.codes = self.db.codes
-        self.filename_col = self.db.filename  # notification filename
+        self.filename_col = self.db.filename
+        self.movie_updates = self.db.movie_updates
         self.connection = self.db.connections
 
     async def add_name(self, filename):
-        if await self.filename_col.find_one({'_id': filename}):
+        if await self.movie_updates.find_one({'_id': filename}):
             return False
-        await self.filename_col.insert_one({'_id': filename})
+        await self.movie_updates.insert_one({'_id': filename})
         return True
 
     async def delete_all_msg(self):
-        await self.filename_col.delete_many({})
+        await self.movie_updates.delete_many({})
         print("All filenames notification have been deleted.")
         return True
 
@@ -143,7 +144,7 @@ class Database:
             'auto_ffilter': AUTO_FFILTER,
             'max_btn': MAX_BTN,
             'template': IMDB_TEMPLATE,
-            'log': LOG_VR_CHANNEL,
+            'log': LOG_CHANNEL,
             'tutorial': TUTORIAL,
             'tutorial_2': TUTORIAL_2,
             'tutorial_3': TUTORIAL_3,
@@ -405,5 +406,4 @@ class Database:
         
 db = Database(DATABASE_URI, DATABASE_NAME)    
 db2 = Database(DATABASE_URI2, DATABASE_NAME)
-
 
