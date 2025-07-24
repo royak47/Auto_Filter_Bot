@@ -34,7 +34,6 @@ class dreamcinezoneXBot(Client):
             workers=60,
             plugins={"root": "plugins"},
             sleep_threshold=5,
-            protect_content=False  # ✅ Important fix for forwarding, copying, screenshots
         )
     async def iter_messages(
         self,
