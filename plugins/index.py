@@ -6,7 +6,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified
 from info import ADMINS, INDEX_REQ_CHANNEL as LOG_CHANNEL
-from database.ia_filterdb import save_file
+from database.ia_filterdb import save_file, bulk_save_files
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from utils import temp, get_readable_time
 from math import ceil
@@ -137,7 +137,7 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
     deleted = 0
     no_media = 0
     unsupported = 0
-    BATCH_SIZE = 200
+    BATCH_SIZE = 300  # larger batches + bulk_save = faster indexing
     start_time = time.time()
 
     async with lock:
@@ -176,7 +176,7 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                     errors += len(message_ids)
                     current += len(message_ids)
                     continue
-                save_tasks = []
+                media_batch = []
                 for message in messages:
                     current += 1
                     try:
@@ -195,23 +195,32 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                             continue
                         media.file_type = message.media.value
                         media.caption = message.caption
-                        save_tasks.append(save_file(media))
-
+                        media_batch.append(media)
                     except Exception:
                         errors += 1
                         continue
-                results = await asyncio.gather(*save_tasks, return_exceptions=True)
-                for result in results:
-                    if isinstance(result, Exception):
-                        errors += 1
-                    else:
-                        ok, code = result
-                        if ok:
-                            total_files += 1
-                        elif code == 0:
-                            duplicate += 1
-                        elif code == 2:
-                            errors += 1
+
+                # Fast bulk insert (much faster than per-file save_file)
+                if media_batch:
+                    try:
+                        saved, dups, errs = await bulk_save_files(media_batch)
+                        total_files += saved
+                        duplicate += dups
+                        errors += errs
+                    except Exception as e:
+                        logger.exception("bulk_save_files failed, falling back")
+                        for m in media_batch:
+                            try:
+                                ok, code = await save_file(m)
+                                if ok:
+                                    total_files += 1
+                                elif code == 0:
+                                    duplicate += 1
+                                else:
+                                    errors += 1
+                            except Exception:
+                                errors += 1
+
                 batch_time = time.time() - batch_start
                 batch_times.append(batch_time)
                 elapsed = time.time() - start_time

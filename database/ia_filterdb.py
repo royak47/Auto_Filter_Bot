@@ -138,6 +138,100 @@ async def save_file(media):
     return True, 1
 
 
+async def bulk_save_files(media_list):
+    """
+    Fast bulk insert for indexing.
+    Returns: (saved_count, duplicate_count, error_count)
+    Much faster than calling save_file one-by-one.
+    """
+    if not media_list:
+        return 0, 0, 0
+
+    docs = []
+    file_ids = []
+    for media in media_list:
+        try:
+            file_id, file_ref = unpack_new_file_id(media.file_id)
+            file_name = re.sub(
+                r"[_\-\.#+$%^&*()!~`,;:\"'?/<>\[\]{}=|\\]", " ", str(media.file_name)
+            )
+            file_name = re.sub(r"\s+", " ", file_name).strip()
+            caption = None
+            if INDEX_CAPTION and media.caption:
+                try:
+                    caption = media.caption.html
+                except Exception:
+                    caption = str(media.caption) if media.caption else None
+            docs.append({
+                "_id": file_id,
+                "file_ref": file_ref,
+                "file_name": file_name,
+                "file_size": media.file_size,
+                "file_type": getattr(media, "file_type", None),
+                "mime_type": getattr(media, "mime_type", None),
+                "caption": caption,
+            })
+            file_ids.append(file_id)
+        except Exception as e:
+            logger.warning(f"bulk prepare skip: {e}")
+
+    if not docs:
+        return 0, 0, len(media_list)
+
+    # Decide primary vs secondary once per batch (not per file)
+    use_secondary = False
+    if MULTIPLE_DB:
+        try:
+            primary_db_size = await check_db_size(db)
+            if primary_db_size >= 407:
+                use_secondary = True
+        except Exception:
+            pass
+
+    collection = db2[COLLECTION_NAME] if use_secondary else db[COLLECTION_NAME]
+
+    # Bulk existence check against both DBs when MULTIPLE_DB is on
+    existing = set()
+    try:
+        cursor = collection.find({"_id": {"$in": file_ids}}, {"_id": 1})
+        async for doc in cursor:
+            existing.add(doc["_id"])
+        if MULTIPLE_DB:
+            other = db[COLLECTION_NAME] if use_secondary else db2[COLLECTION_NAME]
+            cursor_o = other.find({"_id": {"$in": file_ids}}, {"_id": 1})
+            async for doc in cursor_o:
+                existing.add(doc["_id"])
+    except Exception as e:
+        logger.error(f"bulk existence check failed: {e}")
+
+    to_insert = [d for d in docs if d["_id"] not in existing]
+    duplicate = len(docs) - len(to_insert)
+    error = 0
+    saved = 0
+
+    if to_insert:
+        try:
+            # ordered=False → continue on duplicate key errors
+            result = await collection.insert_many(to_insert, ordered=False)
+            saved = len(result.inserted_ids)
+        except Exception as e:
+            # PyMongo BulkWriteError still inserts successful ones
+            from pymongo.errors import BulkWriteError
+            if isinstance(e, BulkWriteError):
+                saved = e.details.get("nInserted", 0)
+                # count write errors that are not duplicate
+                for err in e.details.get("writeErrors", []):
+                    if err.get("code") != 11000:
+                        error += 1
+                    else:
+                        duplicate += 1
+            else:
+                logger.exception("bulk insert failed")
+                error += len(to_insert)
+
+    return saved, duplicate, error
+
+
 async def get_search_results(
     chat_id, query, file_type=None, max_results=10, offset=0, filter=False
 ):

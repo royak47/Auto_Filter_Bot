@@ -8,13 +8,47 @@ from info import LOG_CHANNEL, URL
 import aiohttp
 import asyncio
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
 async def web_server():
-    web_app = web.Application(client_max_size=30000000)
+    from api.routes import api_routes, cors_middleware
+
+    web_app = web.Application(
+        client_max_size=30000000,
+        middlewares=[cors_middleware],
+    )
+    # Existing stream / watch routes (unchanged)
     web_app.add_routes(routes)
+    # Public JSON API for the website
+    web_app.add_routes(api_routes)
+
+    # Serve static frontend if present (optional same-origin deploy)
+    web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
+    if os.path.isdir(web_dir):
+        static_dir = os.path.join(web_dir, "static")
+        if os.path.isdir(static_dir):
+            web_app.router.add_static("/static/", static_dir, name="static")
+
+        async def index_handler(request):
+            index_path = os.path.join(web_dir, "index.html")
+            if os.path.isfile(index_path):
+                return web.FileResponse(index_path)
+            return web.Response(text="Frontend not built", status=404)
+
+        web_app.router.add_get("/app", index_handler)
+        web_app.router.add_get("/app/", index_handler)
+
+        async def spa_handler(request):
+            index_path = os.path.join(web_dir, "index.html")
+            if os.path.isfile(index_path):
+                return web.FileResponse(index_path)
+            return web.Response(text="Not found", status=404)
+
+        web_app.router.add_get("/app/{path:.*}", spa_handler)
+
     return web_app
 
 async def check_expired_premium(client):
@@ -45,5 +79,4 @@ async def keep_alive():
                     if resp.status != 200:
                         logging.warning(f"⚠️ Ping Error! Status: {resp.status}")
             except Exception as e:
-                logging.error(f"❌ Ping Failed: {e}")           
-
+                logging.error(f"❌ Ping Failed: {e}")
