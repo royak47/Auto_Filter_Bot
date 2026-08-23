@@ -14,9 +14,11 @@ from aiohttp import web
 
 from database.ia_filterdb import Media, Media2, get_search_results, get_file_details
 from database.users_chats_db import db as users_db
-from info import ADMINS, STREAM_MODE, MULTIPLE_DB, URL as BASE_URL
+from info import ADMINS, STREAM_MODE, MULTIPLE_DB, URL as BASE_URL, LOG_CHANNEL
 from utils import temp
 from .helpers import media_to_dict, paginate, human_size
+from .meta_cache import enrich_items, get_imdb_meta
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +151,7 @@ async def api_search(request: web.Request):
 
     bot_user = _bot_username()
     results = [media_to_dict(f, bot_user) for f in files]
+    await enrich_items(results, limit=len(results))
 
     return web.json_response({
         "ok": True,
@@ -193,9 +196,11 @@ async def api_latest(request: web.Request):
         return web.json_response({"ok": False, "error": "Failed to load latest"}, status=500)
 
     bot_user = _bot_username()
+    results = [media_to_dict(f, bot_user) for f in files]
+    await enrich_items(results, limit=len(results))
     return web.json_response({
         "ok": True,
-        "results": [media_to_dict(f, bot_user) for f in files],
+        "results": results,
         "pagination": paginate(total, page, limit),
     })
 
@@ -244,8 +249,21 @@ async def api_item(request: web.Request):
 
     item["related"] = related
     item["stream_supported"] = bool(STREAM_MODE)
-    # Note: permanent stream URL requires bot to generate log message.
-    # Frontend should prefer telegram_url for reliability.
+    meta = await get_imdb_meta(item.get("file_name") or "", item.get("title") or "")
+    if meta.get("poster"):
+        item["poster"] = meta["poster"]
+    if meta.get("rating") and str(meta.get("rating")) not in ("None", "N/A", ""):
+        try:
+            item["imdb_rating"] = float(meta["rating"])
+        except (TypeError, ValueError):
+            item["imdb_rating"] = meta["rating"]
+    if meta.get("plot"):
+        item["plot"] = meta["plot"]
+    if meta.get("imdb_title"):
+        item["imdb_title"] = meta["imdb_title"]
+    if meta.get("genres"):
+        item["genres"] = meta["genres"]
+    await enrich_items(related, limit=len(related))
     return web.json_response({"ok": True, "item": item})
 
 
@@ -329,3 +347,114 @@ async def api_admin_users(request: web.Request):
     except Exception:
         logger.exception("admin users failed")
         return web.json_response({"ok": False, "error": "Failed"}, status=500)
+
+
+# ───────────────────────── Stream / Download links ─────────────────────────
+
+@api_routes.post("/api/items/{file_id}/links")
+@api_routes.get("/api/items/{file_id}/links")
+async def api_item_links(request: web.Request):
+    """Generate watch + download URLs via LOG_CHANNEL (same as bot stream)."""
+    if limited := _rate_limit(request):
+        return limited
+
+    if not STREAM_MODE:
+        return web.json_response(
+            {"ok": False, "error": "Streaming is disabled on this server"},
+            status=503,
+        )
+
+    file_id = request.match_info["file_id"]
+    if not file_id or len(file_id) > 200:
+        return web.json_response({"ok": False, "error": "Invalid id"}, status=400)
+
+    # Verify file exists in DB
+    try:
+        files = await get_file_details(file_id)
+    except Exception:
+        files = None
+    if not files:
+        return web.json_response({"ok": False, "error": "Not found"}, status=404)
+
+    try:
+        from dreamxbotz.Bot import dreamxbotz, multi_clients
+        from dreamxbotz.util.file_properties import get_hash, get_name
+
+        client = dreamxbotz
+        if multi_clients:
+            try:
+                index = min(multi_clients, key=lambda k: 0)
+                # multi_clients is dict id->client; prefer main bot
+                client = dreamxbotz
+            except Exception:
+                client = dreamxbotz
+
+        log_msg = await client.send_cached_media(chat_id=LOG_CHANNEL, file_id=file_id)
+        name = get_name(log_msg) or "file"
+        h = get_hash(log_msg)
+        base = (BASE_URL or "").rstrip("/") + "/"
+        stream_url = f"{base}watch/{log_msg.id}/{quote_plus(name)}?hash={h}"
+        download_url = f"{base}{log_msg.id}/{quote_plus(name)}?hash={h}"
+        return web.json_response({
+            "ok": True,
+            "stream_url": stream_url,
+            "download_url": download_url,
+            "message_id": log_msg.id,
+        })
+    except Exception as e:
+        logger.exception("link generation failed")
+        return web.json_response(
+            {"ok": False, "error": f"Could not generate links: {type(e).__name__}"},
+            status=500,
+        )
+
+
+# ───────────────────────── Top rated (IMDB) ─────────────────────────
+
+@api_routes.get("/api/top-rated")
+async def api_top_rated(request: web.Request):
+    """Latest files enriched with IMDB, filtered to rating >= min_rating."""
+    if limited := _rate_limit(request):
+        return limited
+    try:
+        limit = min(40, max(1, int(request.rel_url.query.get("limit", "20"))))
+        min_rating = float(request.rel_url.query.get("min_rating", "7.0"))
+    except ValueError:
+        return web.json_response({"ok": False, "error": "Invalid params"}, status=400)
+
+    try:
+        # Pull a larger recent pool, then filter by rating
+        pool = 80
+        cursor1 = Media.find({}).sort("$natural", -1).limit(pool)
+        files1 = await cursor1.to_list(length=pool)
+        if MULTIPLE_DB and len(files1) < pool:
+            cursor2 = Media2.find({}).sort("$natural", -1).limit(pool - len(files1))
+            files1 = files1 + await cursor2.to_list(length=pool - len(files1))
+    except Exception:
+        logger.exception("top-rated fetch failed")
+        return web.json_response({"ok": False, "error": "Failed"}, status=500)
+
+    bot_user = _bot_username()
+    results = [media_to_dict(f, bot_user) for f in files1]
+    await enrich_items(results, limit=len(results))
+
+    top = []
+    for it in results:
+        r = it.get("imdb_rating")
+        try:
+            rf = float(r) if r is not None else 0
+        except (TypeError, ValueError):
+            rf = 0
+        if rf >= min_rating:
+            it["_sort_rating"] = rf
+            top.append(it)
+
+    top.sort(key=lambda x: x.get("_sort_rating", 0), reverse=True)
+    for it in top:
+        it.pop("_sort_rating", None)
+
+    return web.json_response({
+        "ok": True,
+        "results": top[:limit],
+        "min_rating": min_rating,
+    })
